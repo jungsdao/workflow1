@@ -128,7 +128,7 @@ def _run_autopara_wrappable(atoms, calculator, Ediff0=1, T0=1000, minima_thresho
             np.random.seed(_autopara_per_item_info[at_i]["rng"].integers(2 ** 32))
 
         traj = _atom_opt_hopping(atom=at, calculator=calculator, Ediff0=Ediff0, T0=T0, minima_threshold=minima_threshold,
-                                 mdmin=mdmin, fmax=fmax, timestep=timestep, totalsteps=totalsteps,
+                                 mdmin=mdmin, fmax=fmax, timestep=timestep, totalsteps=totalsteps, minima_traj=minima_traj, maxtemp=maxtemp,
                                  skip_failures=skip_failures, workdir=workdir, **opt_kwargs)
         all_trajs.append(traj)
 
