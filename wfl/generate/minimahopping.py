@@ -29,8 +29,8 @@ def _get_MD_trajectory(rundir):
 
 
 # perform MinimaHopping on one ASE.atoms object
-def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin,
-                     fmax, timestep, totalsteps, skip_failures, workdir=None, **opt_kwargs):
+def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin, minima_traj,
+                     fmax, timestep, totalsteps, maxtemp, skip_failures, workdir=None, **opt_kwargs):
     save_tmpdir = opt_kwargs.pop("save_tmpdir", False)
     return_all_traj = opt_kwargs.pop("return_all_traj", False)
     origdir = Path.cwd()
@@ -46,7 +46,7 @@ def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin,
     try:
         opt = MinimaHopping(atom, Ediff0=Ediff0, T0=T0, minima_threshold=minima_threshold,
                             mdmin=mdmin, fmax=fmax, timestep=timestep, **opt_kwargs)
-        opt(totalsteps=totalsteps)
+        opt(totalsteps=totalsteps, maxtemp=maxtemp)
     except Exception as exc:
         # optimization may sometimes fail to converge.
         if skip_failures:
@@ -63,7 +63,7 @@ def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin,
         if return_all_traj:
             traj += _get_MD_trajectory(rundir)
 
-        for hop_traj in Trajectory('minima.traj'):
+        for hop_traj in Trajectory(minima_traj):
             config_type_append(hop_traj, 'minima')
             traj.append(hop_traj)
         if not save_tmpdir:
@@ -75,8 +75,8 @@ def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin,
     os.chdir(origdir)
 
 
-def _run_autopara_wrappable(atoms, calculator, Ediff0=1, T0=1000, minima_threshold=0.5, mdmin=2,
-                           fmax=1, timestep=1, totalsteps=10, skip_failures=True, workdir=None,
+def _run_autopara_wrappable(atoms, calculator, Ediff0=1, T0=1000, minima_threshold=0.5, mdmin=2, minima_traj="minima.traj",
+                           fmax=0.05, timestep=1, totalsteps=10, maxtemp=None, skip_failures=True, workdir=None,
                            rng=None, _autopara_per_item_info=None,
                            **opt_kwargs):
     """runs a structure optimization
