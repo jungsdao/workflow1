@@ -13,7 +13,7 @@ from .utils import save_config_type
 
 
 def _run_autopara_wrappable(list_of_images, calculator, fmax=5e-2, steps=1000,
-           traj_step_interval=1, traj_subselect=None, skip_failures=True,
+           traj_step_interval=1, traj_subselect=None, skip_failures=True, attach_function=None, attach_interval=None,
            results_prefix='last_op__neb_', verbose=False, logfile=None, update_config_type="append",
            **neb_kwargs):
     """runs a structure optimization. By default calculator properties will be stored
@@ -54,7 +54,9 @@ def _run_autopara_wrappable(list_of_images, calculator, fmax=5e-2, steps=1000,
         list(Atoms) trajectories
     """
     logfile = neb_kwargs.get("logfile", None)
-   
+    attach_function = neb_kwargs.pop("attach_function", None)
+    attach_interval = neb_kwargs.pop("attach_interval", None)
+
     if logfile is None and verbose:
         logfile = "-"
 
@@ -86,6 +88,9 @@ def _run_autopara_wrappable(list_of_images, calculator, fmax=5e-2, steps=1000,
             traj.append(cur_images)
 
         opt.attach(process_step, interval=traj_step_interval)
+        
+        if attach_function is not None:
+            opt.attach(attach_function, interval=attach_interval)
 
         # preliminary value
         final_status = 'unconverged'
