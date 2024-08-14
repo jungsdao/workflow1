@@ -6,7 +6,7 @@ import numpy as np
 
 from .abort_base import AbortSimBase
 from ase.neighborlist import neighbor_list
-
+from abc import ABC, abstractmethod
 
 class AbortOnCollision(AbortSimBase):
     """Abort an MD run if a collision (two atoms closer than some distance) happens
@@ -57,3 +57,39 @@ class AbortOnLowEnergy(AbortSimBase):
             return True
         else:
             return (E_per_atom - self.initial_E_per_atom) >= self.delta_E_per_atom
+
+
+class AbortOnOscillation(ABC):
+    """Base class used for checking and aborting MD simulation of `wfl.generate.md.sample()`.
+    See `stop` method docstring for its default behavior.
+    """
+    def __init__(self, n_failed_steps=15):
+         self.fmax_list = []
+         self.n_failed_steps = n_failed_steps
+
+    def atoms_ok(self, opt):
+        """Method returning a boolean indicating whether this trajectory step is acceptable.
+        All derived classes must implement this method.
+
+        Parameters
+        ----------
+
+        at: Atoms
+            atomic configuration
+
+        Returns
+        -------
+        is_ok: bool containing status
+        """
+        forces = opt.optimizable.neb.get_forces()
+        fmax = np.sqrt((forces ** 2).sum(axis=1).max())
+        return fmax
+
+    def stop(self, opt):
+        """Returns a boolean indicating whether `wfl.generate.md.sample()` should stop
+        the simulation. Defaults to aborting if `n_failed_steps` in a row `atoms_ok()`
+        are evaluated to False. Derrived classes may overwrite this."""
+        self.fmax_list.append(self.atoms_ok(opt))
+        if len(self.fmax_list) > self.n_failed_steps and len(np.unique(np.round(self.fmax_list[-self.n_failed_steps:], decimals=8))) == 2:
+            return True
+
