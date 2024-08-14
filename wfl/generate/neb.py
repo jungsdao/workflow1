@@ -14,7 +14,7 @@ from .utils import save_config_type
 
 def _run_autopara_wrappable(list_of_images, calculator, fmax=5e-2, steps=1000,
            traj_step_interval=1, traj_subselect=None, skip_failures=True, attach_kwargs=None, attach_interval=None,
-           results_prefix='last_op__neb_', verbose=False, logfile=None, update_config_type="append",
+           results_prefix='last_op__neb_', verbose=False, logfile=None, update_config_type="append", abort_check=None,
            **neb_kwargs):
     """runs a structure optimization. By default calculator properties will be stored
     in keys prefixed with "last_op__neb_", which may be overwritten by next operation.
@@ -54,9 +54,14 @@ def _run_autopara_wrappable(list_of_images, calculator, fmax=5e-2, steps=1000,
         list(Atoms) trajectories
     """
     logfile = neb_kwargs.get("logfile", None)
+#    print(neb_kwargs)
+#    attach_function = neb_kwargs.pop("attach_function", None)
+#    attach_interval = neb_kwargs.pop("attach_interval", None)
+#    print(attach_function)
 
     if attach_kwargs is not None:
         attach_constructor = attach_kwargs.pop("attach_function", None)
+#        attach_interval = attach_kwargs.pop("attach_interval", None)
 
     if logfile is None and verbose:
         logfile = "-"
@@ -87,11 +92,17 @@ def _run_autopara_wrappable(list_of_images, calculator, fmax=5e-2, steps=1000,
                 cur_images.append(new_config)
 
             traj.append(cur_images)
+            
+            if abort_check is not None:
+                if abort_check.stop(opt):
+                    raise RuntimeError(f"NEB was stopped by the NEB checker function {abort_check.__class__.__name__}")
 
         opt.attach(process_step, interval=traj_step_interval)
         
         if attach_kwargs is not None:
             attach_kwargs["neb"] = neb
+#            attach_function = attach_constructor(**attach_kwargs)
+#            print("attach function", attach_function)
             opt.attach(attach_constructor, interval=attach_interval, **attach_kwargs)
 
         # preliminary value
