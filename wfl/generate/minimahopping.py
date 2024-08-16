@@ -30,8 +30,8 @@ def _get_MD_trajectory(rundir, update_config_type, prefix):
 
 
 # perform MinimaHopping on one ASE.atoms object
-def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin,
-                     fmax, timestep, totalsteps, skip_failures, update_config_type, results_prefix,
+def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin, minima_traj,
+                     fmax, timestep, totalsteps, maxtemp, skip_failures, update_config_type, results_prefix,
                      workdir=None, **opt_kwargs):
     save_tmpdir = opt_kwargs.pop("save_tmpdir", False)
     return_all_traj = opt_kwargs.pop("return_all_traj", False)
@@ -48,7 +48,7 @@ def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin,
     try:
         opt = MinimaHopping(atom, Ediff0=Ediff0, T0=T0, minima_threshold=minima_threshold,
                             mdmin=mdmin, fmax=fmax, timestep=timestep, **opt_kwargs)
-        opt(totalsteps=totalsteps)
+        opt(totalsteps=totalsteps, maxtemp=maxtemp)
     except Exception as exc:
         # optimization may sometimes fail to converge.
         if skip_failures:
@@ -65,7 +65,7 @@ def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin,
         if return_all_traj:
             traj += _get_MD_trajectory(rundir, update_config_type, prefix=results_prefix)
 
-        for hop_traj in Trajectory('minima.traj'):
+        for hop_traj in Trajectory(minima_traj):
             new_config = at_copy_save_calc_results(hop_traj, prefix=results_prefix)
             save_config_type(new_config, update_config_type, 'minhop_min')
             traj.append(new_config)
@@ -78,8 +78,8 @@ def _atom_opt_hopping(atom, calculator, Ediff0, T0, minima_threshold, mdmin,
     os.chdir(origdir)
 
 
-def _run_autopara_wrappable(atoms, calculator, Ediff0=1, T0=1000, minima_threshold=0.5, mdmin=2,
-                           fmax=1, timestep=1, totalsteps=10, skip_failures=True, update_config_type="append",
+def _run_autopara_wrappable(atoms, calculator, Ediff0=1, T0=1000, minima_threshold=0.5, mdmin=2, minima_traj="minima.traj",
+                           fmax=0.05, timestep=1, totalsteps=10, maxtemp=None, skip_failures=True, update_config_type="append",
                            results_prefix='last_op__minhop_', workdir=None, rng=None, _autopara_per_item_info=None,
                            **opt_kwargs):
     """runs a structure optimization
@@ -133,7 +133,7 @@ def _run_autopara_wrappable(atoms, calculator, Ediff0=1, T0=1000, minima_thresho
             np.random.seed(_autopara_per_item_info[at_i]["rng"].integers(2 ** 32))
 
         traj = _atom_opt_hopping(atom=at, calculator=calculator, Ediff0=Ediff0, T0=T0, minima_threshold=minima_threshold,
-                                 mdmin=mdmin, fmax=fmax, timestep=timestep, totalsteps=totalsteps,
+                                 mdmin=mdmin, fmax=fmax, timestep=timestep, totalsteps=totalsteps, minima_traj=minima_traj=minima_traj, maxtemp=maxtemp,
                                  skip_failures=skip_failures, update_config_type=update_config_type, results_prefix=results_prefix,
                                  workdir=workdir, **opt_kwargs)
         all_trajs.append(traj)
