@@ -34,7 +34,7 @@ PreconLBFGS.log = _new_log
 def _run_autopara_wrappable(atoms, calculator, fmax=1.0e-3, smax=None, steps=1000, pressure=None,
            stress_mask=None, keep_symmetry=True, traj_step_interval=1, traj_subselect=None,
            skip_failures=True, results_prefix='last_op__optimize_', verbose=False, update_config_type="append",
-           rng=None, _autopara_per_item_info=None,
+           optimizer=PreconLBFGS, rng=None, _autopara_per_item_info=None,
            **opt_kwargs):
     """runs a structure optimization. By default calculator properties will be stored in keys
     prefixed with "last_op__optimize_", which may be overwritten by next operation.
@@ -73,6 +73,8 @@ def _run_autopara_wrappable(atoms, calculator, fmax=1.0e-3, smax=None, steps=100
         optimisation logs are not printed unless this is True
     update_config_type: ["append" | "overwrite" | False], default "append"
         whether/how to add at.info['optimize_config_type'] to at.info['config_type']
+    optimizer : ASE optimizer
+        optimizer to use, default LBFGSPrecon
     opt_kwargs
         keyword arguments for PreconLBFGS
     rng: numpy.random.Generator, default None
@@ -93,8 +95,8 @@ def _run_autopara_wrappable(atoms, calculator, fmax=1.0e-3, smax=None, steps=100
 
     calculator = construct_calculator_picklesafe(calculator)
 
-    if smax is None:
-        smax = fmax
+#    if smax is None:
+#        smax = fmax
 
     if keep_symmetry:
         # noinspection PyUnresolvedReferences,PyUnresolvedReferences
@@ -134,7 +136,7 @@ def _run_autopara_wrappable(atoms, calculator, fmax=1.0e-3, smax=None, steps=100
         else:
             wrapped_at = at
 
-        opt = PreconLBFGS(wrapped_at, **opt_kwargs_to_use)
+        opt = optimizer(wrapped_at, **opt_kwargs_to_use)
 
         # default status, will be overwritten for first and last configs in traj
         at.info['optimize_config_type'] = 'optimize_mid'
@@ -161,7 +163,7 @@ def _run_autopara_wrappable(atoms, calculator, fmax=1.0e-3, smax=None, steps=100
         final_status = 'unconverged'
 
         try:
-            opt.run(fmax=fmax, smax=smax, steps=steps)
+            opt.run(fmax=fmax, steps=steps)
         except Exception as exc:
             # label actual failed optimizations
             # when this happens, the atomic config somehow ends up with a 6-vector stress, which can't be
